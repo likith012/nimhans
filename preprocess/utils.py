@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
+import os
 
 import mne
-from braindecode.datasets import BaseDataset, BaseConcatDataset
 
 
-class SleepStaging(BaseConcatDataset):
+class SleepStaging():
     def __init__(
         self,
         window_size=30,
@@ -13,6 +13,7 @@ class SleepStaging(BaseConcatDataset):
         raw_path=None,
         ann_path=None,
         channels=None,
+        modality=None,
         preload=False,
         crop_wake_mins=0,
         crop=None,
@@ -26,34 +27,44 @@ class SleepStaging(BaseConcatDataset):
             raw_path,
             ann_path,
             channels,
+            modality,
             preload=preload,
             crop_wake_mins=crop_wake_mins,
             crop=crop,
         )
-        base_ds = BaseDataset(raw, desc)
-        super().__init__([base_ds])
-
-    def read_annotations(ann_fname):
+        
+        self._raw = raw
+        self._description = desc
+    
+    @property
+    def raw(self):
+        return self._raw
+    
+    @property
+    def description(self):
+        return self._description
+        
+    def read_annotations(self, ann_fname):
         labels = []
         ann = pd.read_excel(ann_fname, sheet_name="Sleep profile")[7:]
         ann.reset_index(inplace=True, drop=True)
         ann.columns = ["timestamp", "stage"]
         ann_list = ann["stage"].tolist()
-        timestamps = ann["timestamp"].tolist()
+        timestamps = ann["timestamp"].tolist() # to be used
 
         for lbl in ann_list:
             if lbl == "Wake":
-                labels.append(0)
+                labels.append('W')
             elif lbl == "N1":
-                labels.append(1)
+                labels.append('N1')
             elif lbl == "N2":
-                labels.append(2)
+                labels.append('N2')
             elif lbl == "N3":
-                labels.append(3)
+                labels.append('N3')
             elif lbl == "REM":
-                labels.append(4)
+                labels.append('R')
             elif lbl == "A":
-                labels.append(5)
+                labels.append('BAD_A')
             else:
                 print(
                     "============================== Faulty file ============================="
@@ -62,7 +73,7 @@ class SleepStaging(BaseConcatDataset):
         labels = np.asarray(labels)
         onsets = [self.window_size * i for i in range(len(labels))]
         onsets = np.asarray(onsets)
-        durations = np.repeat(self.window_size, len(labels))
+        durations = np.repeat(float(self.window_size), len(labels))
         annots = mne.Annotations(onsets, durations, labels)
         return annots
 
@@ -71,11 +82,17 @@ class SleepStaging(BaseConcatDataset):
         raw_fname,
         ann_fname,
         channels,
+        modality,
         preload,
         crop_wake_mins,
         crop,
-    ):
+    ):  
         raw = mne.io.read_raw_edf(raw_fname, preload=preload, include=channels)
+        try:
+            raw.set_channel_types(channels)
+        except:
+            print(f'Please check the channels in {raw_fname}')
+        raw.pick(modality)
         annots = self.read_annotations(ann_fname)
         raw.set_annotations(annots, emit_warning=False)
         raw.resample(self.sfreq, npad="auto")
@@ -94,11 +111,74 @@ class SleepStaging(BaseConcatDataset):
             raw.crop(*crop)
 
         raw_basename = os.path.basename(raw_fname)
-        subj_nb = int(raw_basename[-10:-4])
-        desc = pd.Series(
+        subj_nb = int(raw_basename.split('.')[0][2:])
+        desc = pd.DataFrame(
             {
-                "subject_id": subj_nb,
-            },
-            name="",
+                "subject_id": [subj_nb],
+            }
         )
         return raw, desc
+
+    @staticmethod
+    def create_windows(raw, window_size_samples=None, window_stride_samples=None, mapping=None, drop_last=False, drop_bad=False, description=None ):
+        
+        assert isinstance(window_size_samples, (int, np.integer, type(None)))
+        assert isinstance(window_stride_samples, (int, np.integer, type(None)))
+        assert len(raw.annotations.description) > 0, "No annotations found in raw"
+        
+        if window_size_samples is not None and window_stride_samples is not None:
+            assert window_size_samples > 0, "window size has to be larger than 0"
+            assert window_stride_samples > 0, "window stride has to be larger than 0"
+        else:
+            raise ValueError("Either window_size_samples or window_stride_samples has not been specified")
+        
+        if mapping is None:
+            mapping = dict()
+            unique_events = np.unique(raw.annotations.description)
+            filtered_unique_events = [event for event in unique_events if not event.startswith("BAD_")]
+            mapping.update(
+                {v: k for k, v in enumerate(filtered_unique_events)}
+            )
+            
+        events, events_id = mne.events_from_annotations(raw, event_id=mapping) # type: ignore
+        onsets = events[:, 0] # starts compared to original start of recording
+        targets = events[:, -1]
+        filtered_durations = np.array(
+            [a['duration'] for a in raw.annotations
+                if a['description'] in events_id]
+        )
+        stops = onsets + (filtered_durations * raw.info['sfreq']).astype(int)
+        
+        if window_size_samples is None:
+            window_size_samples = stops[0] - onsets[0]
+            if window_stride_samples is None:
+                window_stride_samples = window_size_samples   
+        
+        if drop_last:
+            if (stops-onsets)[-1] != window_size_samples:
+                stops = stops[:-1]
+                onsets = onsets[:-1]
+                targets = targets[:-1]
+                events = events[:-1]
+                
+        events = [[start, window_size_samples, targets[i_start]] for i_start, start in enumerate(onsets)] # new events
+        metadata = pd.DataFrame({
+            'start': onsets,
+            'stop': stops,
+            'size': window_size_samples,
+            'stride': window_stride_samples,
+            'target': targets})    
+        
+        desc_columns = list(description.columns)
+        for col in desc_columns:
+            metadata[col] = description[col].values[0]
+
+        mne_epochs = mne.Epochs(
+                raw, events, events_id, baseline=None, tmin=0,
+                tmax=(window_size_samples - 1) / raw.info['sfreq'],
+                metadata=metadata, preload=True, verbose=False)
+        
+        if drop_bad:
+            mne_epochs.drop_bad()
+        
+        return mne_epochs

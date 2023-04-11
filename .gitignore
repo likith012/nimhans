@@ -129,6 +129,9 @@ dmypy.json
 .pyre/
 
 # More
+test.ipynb
+test.py
+.nimhans/
 /*/__pycache__/
 .vscode/
 .jupyter/
