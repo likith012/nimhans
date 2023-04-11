@@ -6,11 +6,9 @@ from typing import List
 import mne
 import numpy as np
 from joblib import Parallel, delayed, cpu_count, parallel_backend
-from braindecode.preprocessing.preprocess import preprocess, Preprocessor
-from braindecode.preprocessing.windowers import create_windows_from_events
 
-from .utils import SleepStaging
-
+from .datautil import SleepStaging
+from ..utils import CHANNEL_MAPPING, LABEL_MAPPING
 
 warnings.simplefilter(action='ignore', category=FutureWarning) 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -42,62 +40,6 @@ mne.set_log_level(verbose='WARNING')
 #                              # have been traditionally used to detect apneas and hypopneas during PSG recording
 #     thorax: List = ['Thorax']
     
-    
-# channel_mapping = {
-#     'eeg': ['C4:M1', # EEG with M1, M2 as reference electrodes
-#             'C3:M2',
-#             'O2:M1',
-#             'O1:M2',],
-#     'ecg': ['ECG 2'], # ECG
-#     'eog': ['E1:M2', # EOG with M2 as reference electrodes
-#             'E2:M2',],
-#     'emg': ['EMG'], # EMG
-#     'spo2': ['SPO2'], # Pulse oximeter, measures oxygen saturation levels
-#     'limb': ['PLMr'], # Periodic limb movements
-#     'snore': ['Snore', # Snore signals
-#             'Pressure Snore',], # Percentage of snore signals
-#     'bpm': ['Pulse'], # Beats per minute
-#     'pg': ['Pleth'], # Plethosmography
-#     'position': ['Pos.'], # Sleep position of the person (4 types)
-#     'light': ['Light'], # Light levels, 0 during sleep
-#     'resp': ['Sum Effort', # Respiratory signals
-#              'Abdomen'],
-#     'nasal': ['Pressure Flow'], # Nasal pressure flow
-#     'temp': ['Flow Th'], # Flow thremister: Thermistors utilizing change in temperature of exhaled air to assess the airflow 
-#                         # have been traditionally used to detect apneas and hypopneas during PSG recording
-#     'thorax': ['Thorax'],
-# }
-
-CHANNEL_MAPPING = {'C4:M1': 'eeg',
-                'C3:M2': 'eeg',
-                'O2:M1': 'eeg',
-                'O1:M2': 'eeg',
-                'ECG 2': 'ecg',
-                'E1:M2': 'eog',
-                'E2:M2': 'eog',
-                'EMG': 'emg',
-                'SPO2': 'misc',
-                'PLMr': 'misc',
-                'Snore': 'misc',
-                'Pressure Snore': 'misc',
-                'Pulse': 'misc',
-                'Pleth': 'misc',
-                'Pos.': 'misc',
-                'Light': 'misc',
-                'Sum Effort': 'resp',
-                'Abdomen': 'resp',
-                'Pressure Flow': 'misc',
-                'Flow Th': 'temperature',      
-                'Thorax': 'misc',
-                'Battery': 'misc',
-    }
-LABEL_MAPPING = {  
-    "W": 0,
-    "N1": 1,
-    "N2": 2,
-    "N3": 3,
-    "R": 4,
-}
 
 
 def _get_channels(raw_path, ann_path, window_size_samples, SAVE_PATH, MODALITY):
@@ -147,5 +89,4 @@ def generate(DATA_PATH, MODALITY):
     
     with parallel_backend(backend='loky'):     
         Parallel(n_jobs=n_jobs, verbose=10)([delayed(_preprocess_dataset)(EDF_FILES, ANN_FILES, k, n_jobs, DATA_SAVE_PATH, window_size_samples, MODALITY) for k in range(n_jobs)]) # type: ignore
-
-    # _preprocess_dataset(EDF_FILES, ANN_FILES, 0, n_jobs, DATA_SAVE_PATH, window_size_samples, MODALITY)
+        

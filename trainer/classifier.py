@@ -4,40 +4,40 @@ import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchmetrics import Accuracy, CohenKappa, F1Score
 from torch.nn.functional import softmax
-from models.model import sleep_model
 from sklearn.metrics import balanced_accuracy_score
 from tqdm import tqdm
 from torch.cuda.amp import GradScaler
 
 
-class distill_train(nn.Module):
+class classifierModel(nn.Module):
 
-    def __init__(self, EXPERIMENT_NAME, SAVE_PATH, train_loader, test_loader, wandb_logger, epoch_len, input_channels, num_class, do_context=False):
-        super(distill_train, self).__init__()
+    def __init__(self, model, experiment_id, save_path, train_loader, test_loader, wandb, batch_size=256, weight_decay=3e-5, lr=0.001, num_epochs=60, criterion=None, optimizer=None, scheduler=None):
+        super(trainModel, self).__init__()
 
-        self.epoch_len = epoch_len
-        self.num_class = num_class
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = sleep_model(input_channels, self.epoch_len, self.num_class, do_context).to(self.device)
-        self.exp_name = EXPERIMENT_NAME
-        self.save_path = SAVE_PATH
+        self.model = model.to(self.device)
+        self.exp_name = experiment_id
+        self.save_path = save_path
 
-        self.weight_decay = 3e-5
-        self.lr = 0.001
-        self.num_epochs = 60
+        self.weight_decay = weight_decay
+        self.lr = lr
+        self.num_epochs = num_epochs
 
         self.best_accuracy = 0
-        self.loggr = wandb_logger
+        self.loggr = wandb
         self.train_loader = train_loader
         self.test_loader = test_loader
-        self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.Adam(
-            self.model.parameters(),
-            self.lr,
-            betas=(0.9, 0.99),
-            weight_decay=self.weight_decay,
-        )
-        self.scheduler = ReduceLROnPlateau(self.optimizer,
+        if criterion is None:
+            self.criterion = nn.CrossEntropyLoss()
+        if optimizer is None:
+            self.optimizer = torch.optim.Adam(
+                self.model.parameters(),
+                self.lr,
+                betas=(0.9, 0.99),
+                weight_decay=self.weight_decay,
+            )
+        if scheduler is None:
+            self.scheduler = ReduceLROnPlateau(self.optimizer,
                                            mode="min",
                                            patience=5,
                                            factor=0.2

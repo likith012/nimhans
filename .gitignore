@@ -137,7 +137,6 @@ test.py
 .jupyter/
 .pytest_cache/
 .pyenv/
-/data/ptb/
 __pycache__/
 logs/
 checkpoints/
@@ -146,6 +145,3 @@ wandb/
 /*/.ipynb_checkpoints
 /*/*/__pycache__/
 *.pt
-/*/*.pt
-/*/*/*.pt
-/*/*/*/*.pt

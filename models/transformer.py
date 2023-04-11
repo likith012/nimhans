@@ -1,10 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from einops import rearrange, repeat
+from einops import rearrange
 
 
-########################################################################################
 
 class Residual(nn.Module):
     def __init__(self, fn):
