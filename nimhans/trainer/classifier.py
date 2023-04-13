@@ -11,14 +11,14 @@ from torch.cuda.amp import GradScaler
 
 class classifierModel(nn.Module):
 
-    def __init__(self, model, experiment_id, save_path, train_loader, test_loader, wandb, batch_size=256, weight_decay=3e-5, lr=0.001, num_epochs=60, criterion=None, optimizer=None, scheduler=None):
-        super(trainModel, self).__init__()
+    def __init__(self, model, experiment_id, save_path, train_loader, test_loader, wandb, batch_size=256, n_classes=5, weight_decay=3e-5, lr=0.001, num_epochs=60, criterion=None, optimizer=None, scheduler=None):
+        super(classifierModel, self).__init__()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = model.to(self.device)
         self.exp_name = experiment_id
         self.save_path = save_path
-
+        self.n_classes = n_classes
         self.weight_decay = weight_decay
         self.lr = lr
         self.num_epochs = num_epochs
@@ -52,7 +52,6 @@ class classifierModel(nn.Module):
     def training_step(self, batch, batch_idx):
         X, y = batch
         X, y = X.float().to(self.device), y.long().to(self.device)
-        y = y[:, (self.epoch_len // 2)]
         outs = self.model(X)
         loss = self.criterion(outs, y)
         return loss, outs, y
@@ -60,7 +59,6 @@ class classifierModel(nn.Module):
     def testing_step(self, batch, batch_idx):
         X, y = batch
         X, y = X.float().to(self.device), y.long().to(self.device)
-        y = y[:, (self.epoch_len // 2)]
         outs = self.model(X)
         loss = self.criterion(outs, y)
         return loss, outs, y  
@@ -73,9 +71,9 @@ class classifierModel(nn.Module):
         self.scheduler.step(epoch_loss)
         
         class_preds = epoch_preds.argmax(dim=1)
-        acc = Accuracy(task="multiclass", num_classes=self.num_class).to(self.device)(epoch_preds, epoch_targets)
-        f1_score = F1Score(task="multiclass", num_classes=self.num_class, average="macro").to(self.device)(epoch_preds, epoch_targets)
-        kappa = CohenKappa(task="multiclass", num_classes=self.num_class).to(self.device)(epoch_preds, epoch_targets)
+        acc = Accuracy(task="multiclass", num_classes=self.n_classes).to(self.device)(epoch_preds, epoch_targets)
+        f1_score = F1Score(task="multiclass", num_classes=self.n_classes, average="macro").to(self.device)(epoch_preds, epoch_targets)
+        kappa = CohenKappa(task="multiclass", num_classes=self.n_classes).to(self.device)(epoch_preds, epoch_targets)
         bal_acc = balanced_accuracy_score(epoch_targets.cpu().numpy(), class_preds.cpu().numpy())
 
         self.loggr.log({
@@ -94,9 +92,9 @@ class classifierModel(nn.Module):
         epoch_loss = torch.hstack([torch.tensor(x) for x in outputs['loss']]).mean()
         
         class_preds = epoch_preds.argmax(dim=1)
-        acc = Accuracy(task="multiclass", num_classes=self.num_class).to(self.device)(epoch_preds, epoch_targets)
-        f1_score = F1Score(task="multiclass", num_classes=self.num_class, average="macro").to(self.device)(epoch_preds, epoch_targets)
-        kappa = CohenKappa(task="multiclass", num_classes=self.num_class).to(self.device)(epoch_preds, epoch_targets)
+        acc = Accuracy(task="multiclass", num_classes=self.n_classes).to(self.device)(epoch_preds, epoch_targets)
+        f1_score = F1Score(task="multiclass", num_classes=self.n_classes, average="macro").to(self.device)(epoch_preds, epoch_targets)
+        kappa = CohenKappa(task="multiclass", num_classes=self.n_classes).to(self.device)(epoch_preds, epoch_targets)
         bal_acc = balanced_accuracy_score(epoch_targets.cpu().numpy(), class_preds.cpu().numpy())
 
         self.loggr.log({

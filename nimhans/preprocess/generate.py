@@ -74,19 +74,30 @@ def _preprocess_dataset(raw_paths, ann_paths, k, N, DATA_SAVE_PATH, windows_size
         _get_channels(raw_path, ann_path, windows_size_samples, DATA_SAVE_PATH, MODALITY)  
     
     
-def generate(DATA_PATH, MODALITY):
-    EDF_FILES = glob.glob(f'{DATA_PATH}/*.edf')
-    ANN_FILES = glob.glob(f'{DATA_PATH}/*.xlsx')
-    DATA_SAVE_PATH = os.path.join(os.getcwd(), '.nimhans/subjects_data')
+def generate(data_path=None, modality=None, n_jobs=-1):
+    assert isinstance(data_path, (str, type(None))), f"{data_path} should be of type str"
+    assert modality is None or (isinstance(modality, list) and all(isinstance(item, str) for item in modality)), "modality is not a list of strings and/or None"
     
-    if not os.path.exists(DATA_SAVE_PATH):
-        os.makedirs(DATA_SAVE_PATH, exist_ok=True)
+    if data_path is None:
+        data_path = os.path.expanduser("~/.nimhans/edf_data")
+    
+    if not os.path.exists(data_path):
+        os.makedirs(data_path, exist_ok=True)
+
+    if modality is None:
+        modality = ['eeg']
+
+    edf_files = glob.glob(f'{data_path}/*.edf')
+    ann_files = glob.glob(f'{data_path}/*.xlsx')
+    data_save_path = os.path.expanduser("~/.nimhans/subjects_data")
+    
+    if not os.path.exists(data_save_path):
+        os.makedirs(data_save_path, exist_ok=True)
 
     window_size = 30
     sfreq = 100
     window_size_samples = window_size*sfreq
-    n_jobs = cpu_count()
     
     with parallel_backend(backend='loky'):     
-        Parallel(n_jobs=n_jobs, verbose=10)([delayed(_preprocess_dataset)(EDF_FILES, ANN_FILES, k, n_jobs, DATA_SAVE_PATH, window_size_samples, MODALITY) for k in range(n_jobs)]) # type: ignore
+        Parallel(n_jobs=n_jobs, verbose=10)([delayed(_preprocess_dataset)(edf_files, ann_files, k, n_jobs, data_save_path, window_size_samples, modality) for k in range(n_jobs)]) 
         

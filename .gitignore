@@ -128,7 +128,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# More
+# Misc
 test.ipynb
 test.py
 .nimhans/
