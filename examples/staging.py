@@ -13,7 +13,7 @@ from nimhans.trainer import classifierModel
 set_random_seeds(42)
 
 
-def map_subject_files(dataset_path):
+def _map_subject_files(dataset_path):
     epoch_path = glob.glob(os.path.join(dataset_path, '*'))
     epoch_path.sort(key=natural_keys)
 
@@ -55,7 +55,6 @@ def do_k_fold(experiment_id, subject_files, k, modality, weights_path, wandb, mo
             batch_size=batch_size,
             shuffle=True,
             num_workers=n_jobs,
-
         )
         test_loader = DataLoader(
             test_dataset,
@@ -74,7 +73,7 @@ def do_k_fold(experiment_id, subject_files, k, modality, weights_path, wandb, mo
 
 
 dataset_path = os.path.expanduser("~/.nimhans/subjects_data")
-subject_files = map_subject_files(dataset_path)
+subject_files = _map_subject_files(dataset_path)
 weights_path = os.path.expanduser("~/.nimhans/weights")
 if not os.path.exists(weights_path): os.makedirs(weights_path, exist_ok=True)
 
