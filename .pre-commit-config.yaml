@@ -1,0 +1,96 @@
+# minimum_pre_commit_version: 2.15.0
+# exclude: (html|csv|svg)$
+# default_stages: [
+#     commit,
+#     merge-commit,
+#     push,
+#     prepare-commit-msg,
+#     commit-msg,
+#     post-checkout,
+#     post-commit,
+#     post-merge,
+#     post-rewrite
+# ]
+# ci:
+#     autofix_prs: false
+# repos:
+# -   repo: https://github.com/psf/black
+#     rev: 23.1.0
+#     hooks:
+#     -   id: black
+#         name: black
+#         description: "Black: The uncompromising Python code formatter"
+        # require_serial: true
+        # types_or: [python, pyi]
+
+
+
+
+
+
+
+
+
+
+# -   repo: https://github.com/jendrikseipp/vulture
+#     rev: 'v2.7'
+#     hooks:
+#       - id: vulture
+#         entry: python scripts/run_vulture.py
+#         pass_filenames: true
+#         require_serial: false
+# -   repo: https://github.com/codespell-project/codespell
+#     rev: v2.2.2
+#     hooks:
+#     -   id: codespell
+#         types_or: [python, rst, markdown, cython, c]
+#         additional_dependencies: [tomli]
+# -   repo: https://github.com/MarcoGorelli/cython-lint
+#     rev: v0.12.5
+#     hooks:
+#     -   id: cython-lint
+#     -   id: double-quote-cython-strings
+# -   repo: https://github.com/pre-commit/pre-commit-hooks
+#     rev: v4.4.0
+#     hooks:
+#     -   id: debug-statements
+#     -   id: end-of-file-fixer
+#         exclude: \.txt$
+#         stages: [commit, merge-commit, push, prepare-commit-msg, commit-msg,
+#                  post-checkout, post-commit, post-merge, post-rewrite]
+#     -   id: trailing-whitespace
+#         stages: [commit, merge-commit, push, prepare-commit-msg, commit-msg,
+#                  post-checkout, post-commit, post-merge, post-rewrite]
+#     -   id: check-ast
+#     -   id: check-json
+#     -   id: check-merge-conflict
+#     -   id: detect-aws-credentials
+#     -   id: detect-private-key             
+# -   repo: https://github.com/pycqa/pylint
+#     rev: v2.16.2
+#     hooks:
+#     -   id: pylint
+#         stages: [manual]
+# -   repo: https://github.com/PyCQA/isort
+#     rev: 5.12.0
+#     hooks:
+#     -   id: isort
+# -   repo: https://github.com/asottile/pyupgrade
+#     rev: v3.3.1
+#     hooks:
+#     -   id: pyupgrade
+#         args: [--py38-plus]
+# -   repo: https://github.com/pre-commit/pygrep-hooks
+#     rev: v1.10.0
+#     hooks:
+#       - id: rst-backticks
+#       - id: rst-directive-colons
+#         types: [text]  # overwrite types: [rst]
+#         types_or: [python, rst]
+#       - id: rst-inline-touching-normal
+#         types: [text]  # overwrite types: [rst]
+#         types_or: [python, rst]
+# -   repo: https://github.com/sphinx-contrib/sphinx-lint
+#     rev: v0.6.7
+#     hooks:
+#     - id: sphinx-lint

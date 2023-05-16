@@ -3,8 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 
-
-
 class Residual(nn.Module):
     def __init__(self, fn):
         super().__init__()
@@ -95,5 +93,3 @@ class Transformer(nn.Module):
             x = ff(x)
         x = torch.mean(x,dim=1)
         return x
-
-

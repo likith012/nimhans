@@ -9,24 +9,28 @@ from tqdm import tqdm
 from torch.cuda.amp import GradScaler
 
 
-class classifierModel(nn.Module):
+class ClassifierTrainer(nn.Module):
 
-    def __init__(self, model, experiment_id, save_path, train_loader, test_loader, wandb, batch_size=256, n_classes=5, weight_decay=3e-5, lr=0.001, num_epochs=60, criterion=None, optimizer=None, scheduler=None):
-        super(classifierModel, self).__init__()
+    def __init__(self, model, experiment_name, weights_path, train_loader, test_loader, loggr, n_classes=5, weight_decay=3e-5, lr=0.001, num_epochs=2, criterion=None, optimizer=None, scheduler=None, kfold=None):
+        super(ClassifierTrainer, self).__init__()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = model.to(self.device)
-        self.exp_name = experiment_id
-        self.save_path = save_path
+        self.experiment_name = experiment_name
+        self.kfold = kfold
+        self.weights_path = weights_path
         self.n_classes = n_classes
         self.weight_decay = weight_decay
         self.lr = lr
         self.num_epochs = num_epochs
 
         self.best_accuracy = 0
-        self.loggr = wandb
+        self.best_kappa = 0
+        self.best_f1 = 0
+        self.loggr = loggr
         self.train_loader = train_loader
         self.test_loader = test_loader
+        
         if criterion is None:
             self.criterion = nn.CrossEntropyLoss()
         if optimizer is None:
@@ -76,15 +80,16 @@ class classifierModel(nn.Module):
         kappa = CohenKappa(task="multiclass", num_classes=self.n_classes).to(self.device)(epoch_preds, epoch_targets)
         bal_acc = balanced_accuracy_score(epoch_targets.cpu().numpy(), class_preds.cpu().numpy())
 
-        self.loggr.log({
-                'F1 train': f1_score,
-                'Kappa train': kappa,
-                'Bal Acc train': bal_acc,
-                'Acc train': acc,
-                'Loss train': epoch_loss.item(),
-                'Epoch': epoch,
-                'LR': self.scheduler.optimizer.param_groups[0]["lr"],
-            })
+        if self.loggr is not None:
+            self.loggr.log({
+                    f'F1 train {self.kfold}': f1_score,
+                    f'Kappa train {self.kfold}': kappa,
+                    f'Bal Acc train {self.kfold}': bal_acc,
+                    f'Acc train {self.kfold}': acc,
+                    f'Loss train {self.kfold}': epoch_loss.item(),
+                    'Epoch': epoch,
+                    f'LR {self.kfold}': self.scheduler.optimizer.param_groups[0]["lr"],
+                })
 
     def on_test_epoch_end(self, outputs, epoch):
         epoch_preds = torch.vstack([x for x in outputs["preds"]])
@@ -97,23 +102,24 @@ class classifierModel(nn.Module):
         kappa = CohenKappa(task="multiclass", num_classes=self.n_classes).to(self.device)(epoch_preds, epoch_targets)
         bal_acc = balanced_accuracy_score(epoch_targets.cpu().numpy(), class_preds.cpu().numpy())
 
-        self.loggr.log({
-                'F1 test': f1_score,
-                'Kappa test': kappa,
-                'Bal Acc test': bal_acc,
-                'Acc test': acc,
-                'Loss test': epoch_loss.item(),
-                'Epoch': epoch
-            })
-        return acc
+        if self.loggr is not None:
+            self.loggr.log({
+                    f'F1 test {self.kfold}': f1_score,
+                    f'Kappa test {self.kfold}': kappa,
+                    f'Bal Acc test {self.kfold}': bal_acc,
+                    f'Acc test {self.kfold}': acc,
+                    f'Loss test {self.kfold}': epoch_loss.item(),
+                    'Epoch': epoch
+                })
+        return acc, kappa, f1_score
 
     def fit(self):
         scaler = GradScaler()
         for epoch in range(self.num_epochs):
             
-            print('='*50, end = '\n')
+            print('='*100, end = '\n')
             print(f"Epoch: {epoch}")
-            print('='*50, end = '\n')
+            print('='*100, end = '\n')
 
             # Training Loop
             train_outputs = {"loss": [], "preds": [], "targets": []}
@@ -145,17 +151,22 @@ class classifierModel(nn.Module):
                     test_outputs['preds'].append(softmax(outs, dim=1))
                     test_outputs['targets'].append(y)
 
-            acc = self.on_test_epoch_end(test_outputs, epoch)
-            if self.best_accuracy < acc:
+            current_accuracy, current_kappa, current_f1 = self.on_test_epoch_end(test_outputs, epoch)
+            if self.best_accuracy < current_accuracy:
                 checkpoint = {
                         'model': self.model.state_dict(),
                         'epoch': epoch,
-                        'accuracy': acc,
+                        'accuracy': current_accuracy,
+                        'kappa': current_kappa,
+                        'f1': current_f1,
                     }
                 torch.save(
                     checkpoint,
-                    os.path.join(self.save_path, self.exp_name + "_best.pt"),
+                    os.path.join(self.weights_path, self.experiment_name + "_best.pt"),
                     )
-                self.loggr.save(os.path.join(self.save_path, self.exp_name + "_best.pt"))
-                self.best_accuracy = acc
-                print(f"Best weights saved with accuracy: {self.best_accuracy*100:.2f} at epoch: {epoch}")
+                # if self.loggr is not None:
+                #     self.loggr.save(os.path.join(self.weights_path, self.experiment_id + "_best.pt"))
+                self.best_accuracy = current_accuracy
+                self.best_kappa = current_kappa
+                self.best_f1 = current_f1
+                print(f"\nBest weights saved with accuracy: {self.best_accuracy*100:.2f} at epoch: {epoch}")
