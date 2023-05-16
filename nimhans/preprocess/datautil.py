@@ -93,7 +93,11 @@ class StagingPreprocess:
         #     raw.set_channel_types(channels)
         # except:
         #     print(f'Please check the channels in {raw_fname}')
-        raw.set_channel_types(channels)
+        try:
+            raw.set_channel_types(channels)
+        except:
+            print(f'Channels in {raw_fname}: {raw.ch_names}')
+        
         raw.pick(modality)
         annots = self.read_annotations(ann_fname)
         raw.set_annotations(annots, emit_warning=False)
