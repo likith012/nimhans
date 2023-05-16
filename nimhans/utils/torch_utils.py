@@ -21,7 +21,7 @@ class StagingDataset(Dataset):
             
             for f in tqdm(self.filepaths, desc=f'Loading {desc} data'):
                 lazy_temp = np.load(f)
-                ch_temp = [lazy_temp[ch] for ch in self.channels]
+                ch_temp = [lazy_temp[ch] for ch in self.channels if ch in lazy_temp.keys()]
                 ch_temp = np.concatenate(ch_temp, axis=0)
                 self.lazy_data.append(ch_temp)
                 self.lazy_targets.append(lazy_temp['target'])
@@ -38,7 +38,7 @@ class StagingDataset(Dataset):
             target = self.lazy_targets[index]
         else:
             data = np.load(self.filepaths[index])
-            ch_data = [data[ch] for ch in self.channels]
+            ch_data = [data[ch] for ch in self.channels if ch in data.keys()]
             ch_data = np.concatenate(ch_data, axis=0)
             target = data['target']
         return ch_data, target
