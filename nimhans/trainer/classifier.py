@@ -11,7 +11,7 @@ from torch.cuda.amp import GradScaler
 
 class ClassifierTrainer(nn.Module):
 
-    def __init__(self, model, experiment_name, weights_path, train_loader, test_loader, loggr, n_classes=5, weight_decay=3e-5, lr=0.001, num_epochs=2, criterion=None, optimizer=None, scheduler=None, kfold=None):
+    def __init__(self, model, experiment_name, weights_path, train_loader, test_loader, loggr, n_classes=5, weight_decay=3e-5, lr=0.001, num_epochs=60, criterion=None, optimizer=None, scheduler=None, kfold=None):
         super(ClassifierTrainer, self).__init__()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -164,8 +164,10 @@ class ClassifierTrainer(nn.Module):
                     checkpoint,
                     os.path.join(self.weights_path, self.experiment_name + "_best.pt"),
                     )
+                
                 if self.loggr is not None:
-                    self.loggr.save(os.path.join(self.weights_path, self.experiment_name + "_best.pt"))
+                    self.loggr.save(os.path.join(self.weights_path, self.experiment_name + "_best.pt"), base_path=self.weights_path)
+                    
                 self.best_accuracy = current_accuracy
                 self.best_kappa = current_kappa
                 self.best_f1 = current_f1

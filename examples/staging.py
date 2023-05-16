@@ -129,6 +129,10 @@ def do_k_fold(
         metrics["Accuracy"].append(trainer.best_accuracy)
         metrics["F1"].append(trainer.best_f1)
         metrics["Kappa"].append(trainer.best_kappa)
+    
+    if loggr is not None:
+        table = wandb.Table(data=np.array(list(metrics.values())).transpose(), columns=list(metrics.keys()), rows=[f"fold_{i+1}" for i in range(n_folds)])
+        loggr.log({"metrics": table})
         
     np.save(os.path.join(weights_path, experiment_name + "_metrics.npy"), metrics)
 
