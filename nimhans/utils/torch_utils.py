@@ -1,26 +1,46 @@
 import random
+from tqdm import tqdm
 
 import numpy as np
 import torch
 from torch.utils.data import Dataset
 
 
-class sleepStagingDataset(Dataset):
+class StagingDataset(Dataset):
     """Dataset for train and test"""
 
-    def __init__(self, filepaths, channels):
-        super(sleepStagingDataset, self).__init__()
+    def __init__(self, filepaths, channels, desc, lazy_load=False):
+        super(StagingDataset, self).__init__()
         self.filepaths = filepaths
         self.channels = channels
+        self.lazy_load = lazy_load
+        
+        if not self.lazy_load:
+            self.lazy_data = []
+            self.lazy_targets = []
+            
+            for f in tqdm(self.filepaths, desc=f'Loading {desc} data'):
+                lazy_temp = np.load(f)
+                ch_temp = [lazy_temp[ch] for ch in self.channels]
+                ch_temp = np.concatenate(ch_temp, axis=0)
+                self.lazy_data.append(ch_temp)
+                self.lazy_targets.append(lazy_temp['target'])
+                
+            self.lazy_data = np.stack(self.lazy_data, axis=0)
+            self.lazy_targets = np.stack(self.lazy_targets, axis=0)
 
     def __len__(self):
         return len(self.filepaths)
 
     def __getitem__(self, index):
-        data = np.load(self.filepaths[index])
-        ch_data = [data[ch] for ch in self.channels]
-        ch_data = np.concatenate(ch_data, axis=0)
-        target = data['target']
+        if not self.lazy_load:
+            ch_data = self.lazy_data[index]
+            target = self.lazy_targets[index]
+        else:
+            data = np.load(self.filepaths[index])
+            ch_data = [data[ch] for ch in self.channels]
+            ch_data = np.concatenate(ch_data, axis=0)
+            target = data['target']
         return ch_data, target
     
     

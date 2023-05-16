@@ -187,9 +187,9 @@ class DeepSleepNet(nn.Module):
        and Rehabilitation Engineering, 25(11), 1998-2008.
     """
 
-    def __init__(self, n_classes=5, return_feats=False):
+    def __init__(self, n_channels, n_classes, return_feats=False):
         super().__init__()
-        self.n_channels = 1
+        self.n_channels = n_channels
         self.cnn1 = _SmallCNN()
         self.cnn2 = _LargeCNN()
         self.dropout = nn.Dropout(0.5)

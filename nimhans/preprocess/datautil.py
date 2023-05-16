@@ -1,28 +1,29 @@
-import numpy as np
-import pandas as pd
 import os
+from typing import List, Any, Dict, Union
 
 import mne
+import numpy as np
+import pandas as pd
 
 
-class SleepStaging():
+class StagingPreprocess:
     def __init__(
         self,
-        window_size=30,
-        sfreq=100,
-        raw_path=None,
-        ann_path=None,
-        channels=None,
-        modality=None,
-        preload=False,
-        crop_wake_mins=0,
-        crop=None,
+        raw_path: str,
+        ann_path: str,
+        channels: Dict[str, str],
+        modality: List[str],
+        window_size: float,
+        sfreq: int,
+        preload: bool = False,
+        crop_wake_mins: int = 0,
+        crop: Union[Any, None] = None
     ):
+        if not isinstance(raw_path, str) or not isinstance(ann_path, str):
+            raise Exception(f"raw_path and ann_path must be strings, found raw_path: {type(raw_path)} ann_path: {type(ann_path)}")
+        
         self.window_size = window_size
         self.sfreq = sfreq
-        if (raw_path is None) or (ann_path is None) or (channels is None):
-            raise Exception("Please provide paths for raw and annotations file!")
-
         raw, desc = self._load_raw(
             raw_path,
             ann_path,
@@ -87,11 +88,12 @@ class SleepStaging():
         crop_wake_mins,
         crop,
     ):  
-        raw = mne.io.read_raw_edf(raw_fname, preload=preload, include=channels)
-        try:
-            raw.set_channel_types(channels)
-        except:
-            print(f'Please check the channels in {raw_fname}')
+        raw = mne.io.read_raw_edf(raw_fname, preload=preload)
+        # try:
+        #     raw.set_channel_types(channels)
+        # except:
+        #     print(f'Please check the channels in {raw_fname}')
+        raw.set_channel_types(channels)
         raw.pick(modality)
         annots = self.read_annotations(ann_fname)
         raw.set_annotations(annots, emit_warning=False)
@@ -120,32 +122,31 @@ class SleepStaging():
         return raw, desc
 
     @staticmethod
-    def create_windows(raw, window_size_samples=None, window_stride_samples=None, mapping=None, drop_last=False, drop_bad=False, description=None ):
-        
-        assert isinstance(window_size_samples, (int, np.integer, type(None)))
-        assert isinstance(window_stride_samples, (int, np.integer, type(None)))
+    def create_windows(raw, description, window_size: float = 30., window_stride: float = 30., label_mapping=None, drop_last: bool = False, drop_bad: bool = False):
+        assert isinstance(window_size, (int, np.integer, float, np.floating)), "window_size has to be an integer or float"
+        assert isinstance(window_stride, (int, np.integer, float, np.floating)), "window_stride has to be an integer or float"
+                
+        window_size_samples = int(window_size*raw.info['sfreq'])
+        window_stride_samples = int(window_stride*raw.info['sfreq'])
+
         assert len(raw.annotations.description) > 0, "No annotations found in raw"
+        assert window_size_samples > 0, "window size has to be larger than 0"
+        assert window_stride_samples > 0, "window stride has to be larger than 0"
         
-        if window_size_samples is not None and window_stride_samples is not None:
-            assert window_size_samples > 0, "window size has to be larger than 0"
-            assert window_stride_samples > 0, "window stride has to be larger than 0"
-        else:
-            raise ValueError("Either window_size_samples or window_stride_samples has not been specified")
-        
-        if mapping is None:
-            mapping = dict()
+        if label_mapping is None:
+            label_mapping = dict()
             unique_events = np.unique(raw.annotations.description)
             filtered_unique_events = [event for event in unique_events if not event.startswith("BAD_")]
-            mapping.update(
+            label_mapping.update(
                 {v: k for k, v in enumerate(filtered_unique_events)}
             )
             
-        events, events_id = mne.events_from_annotations(raw, event_id=mapping) # type: ignore
+        events, events_id = mne.events_from_annotations(raw, event_id=label_mapping) # type: ignore
         onsets = events[:, 0] # starts compared to original start of recording
         targets = events[:, -1]
         filtered_durations = np.array(
-            [a['duration'] for a in raw.annotations
-                if a['description'] in events_id]
+            [ann['duration'] for ann in raw.annotations
+                if ann['description'] in events_id]
         )
         stops = onsets + (filtered_durations * raw.info['sfreq']).astype(int)
         

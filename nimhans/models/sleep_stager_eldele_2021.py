@@ -70,7 +70,7 @@ class SleepStagerEldele2021(nn.Module):
     .. [2] https://sleepdata.org/datasets/shhs
     """
 
-    def __init__(self, sfreq, n_tce=2, d_model=80, d_ff=120, n_attn_heads=5, dropout=0.1,
+    def __init__(self, in_channels, sfreq, n_tce=2, d_model=80, d_ff=120, n_attn_heads=5, dropout=0.1,
                  input_size_s=30, n_classes=5, after_reduced_cnn_size=30, return_feats=False):
         super(SleepStagerEldele2021, self).__init__()
 
@@ -89,7 +89,7 @@ class SleepStagerEldele2021(nn.Module):
         if sfreq == 125:
             kernel_size = 6
 
-        mrcnn = _MRCNN(after_reduced_cnn_size, kernel_size)
+        mrcnn = _MRCNN(in_channels, after_reduced_cnn_size, kernel_size)
         attn = _MultiHeadedAttention(n_attn_heads, d_model, after_reduced_cnn_size)
         ff = _PositionwiseFeedForward(d_model, d_ff, dropout)
         tce = _TCE(_EncoderLayer(d_model, deepcopy(attn), deepcopy(ff), after_reduced_cnn_size,
@@ -178,12 +178,12 @@ class _SEBasicBlock(nn.Module):
 
 
 class _MRCNN(nn.Module):
-    def __init__(self, after_reduced_cnn_size, kernel_size=7):
+    def __init__(self, in_channels, after_reduced_cnn_size, kernel_size=7):
         super(_MRCNN, self).__init__()
         drate = 0.5
         self.GELU = nn.GELU()
         self.features1 = nn.Sequential(
-            nn.Conv1d(1, 64, kernel_size=50, stride=6, bias=False, padding=24),
+            nn.Conv1d(in_channels, 64, kernel_size=50, stride=6, bias=False, padding=24),
             nn.BatchNorm1d(64),
             self.GELU,
             nn.MaxPool1d(kernel_size=8, stride=2, padding=4),
@@ -201,7 +201,7 @@ class _MRCNN(nn.Module):
         )
 
         self.features2 = nn.Sequential(
-            nn.Conv1d(1, 64, kernel_size=400, stride=50, bias=False, padding=200),
+            nn.Conv1d(in_channels, 64, kernel_size=400, stride=50, bias=False, padding=200),
             nn.BatchNorm1d(64),
             self.GELU,
             nn.MaxPool1d(kernel_size=4, stride=2, padding=2),
