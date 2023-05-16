@@ -139,7 +139,7 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model", type=str, choices=["resnet", "chambon", "deepsleep", "blanco", "eldele", "usleep"], default="resnet", help="Model to train")
     parser.add_argument("-b", "--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--n_folds", type=int, default=5, help="Number of folds for cross validation")
-    parser.add_argument("--n_jobs", type=int, default=1, help="Number of jobs to run in parallel")
+    parser.add_argument("--n_jobs", type=int, default=0, help="Number of jobs to run in parallel")
     parser.add_argument("--n_classes", type=int, default=5, help="Number of classes")
     parser.add_argument("-d", "--dataset_path", type=str, default="~/.nimhans/preprocessed", help="Path to dataset")
     parser.add_argument("-w", "--weights_path", type=str, default="~/.nimhans/weights", help="Path to save weights")
