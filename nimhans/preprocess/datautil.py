@@ -11,7 +11,7 @@ class StagingPreprocess:
         self,
         raw_path: str,
         ann_path: str,
-        channels: Dict[str, str],
+        channel_mapping: Dict[str, str],
         modality: List[str],
         window_size: float,
         sfreq: int,
@@ -27,7 +27,7 @@ class StagingPreprocess:
         raw, desc = self._load_raw(
             raw_path,
             ann_path,
-            channels,
+            channel_mapping,
             modality,
             preload=preload,
             crop_wake_mins=crop_wake_mins,
@@ -67,9 +67,7 @@ class StagingPreprocess:
             elif lbl == "A":
                 labels.append('BAD_A')
             else:
-                print(
-                    "============================== Faulty file ============================="
-                )
+                labels.append('BAD_?')
 
         labels = np.asarray(labels)
         onsets = [self.window_size * i for i in range(len(labels))]
@@ -78,26 +76,24 @@ class StagingPreprocess:
         annots = mne.Annotations(onsets, durations, labels)
         return annots
 
+    def _set_channel_types(self, raw, channel_mapping):
+        available_channels = raw.info['ch_names']
+        updated_mapping = {channel: channel_mapping[channel] for channel in available_channels if channel in channel_mapping}
+        raw.set_channel_types(updated_mapping)
+        return raw
+    
     def _load_raw(
         self,
         raw_fname,
         ann_fname,
-        channels,
+        channel_mapping,
         modality,
         preload,
         crop_wake_mins,
         crop,
     ):  
-        raw = mne.io.read_raw_edf(raw_fname, preload=preload)
-        # try:
-        #     raw.set_channel_types(channels)
-        # except:
-        #     print(f'Please check the channels in {raw_fname}')
-        try:
-            raw.set_channel_types(channels)
-        except:
-            print(f'Channels in {raw_fname}: {raw.ch_names}')
-        
+        raw = mne.io.read_raw_edf(raw_fname, preload=preload, include=channel_mapping)
+        raw = self._set_channel_types(raw, channel_mapping)
         raw.pick(modality)
         annots = self.read_annotations(ann_fname)
         raw.set_annotations(annots, emit_warning=False)
@@ -124,7 +120,7 @@ class StagingPreprocess:
             }
         )
         return raw, desc
-
+    
     @staticmethod
     def create_windows(raw, description, window_size: float = 30., window_stride: float = 30., label_mapping=None, drop_last: bool = False, drop_bad: bool = False):
         assert isinstance(window_size, (int, np.integer, float, np.floating)), "window_size has to be an integer or float"
