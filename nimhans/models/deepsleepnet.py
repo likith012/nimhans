@@ -10,7 +10,7 @@ class _SmallCNN(nn.Module):  # smaller filter sizes to learn temporal informatio
         super().__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(
-                in_channels=1,
+                in_channels=7,
                 out_channels=64,
                 kernel_size=(1, 50),
                 stride=(1, 6),
@@ -76,7 +76,7 @@ class _LargeCNN(nn.Module):  # larger filter sizes to learn frequency informatio
 
         self.conv1 = nn.Sequential(
             nn.Conv2d(
-                in_channels=1,
+                in_channels=7,
                 out_channels=64,
                 kernel_size=(1, 400),
                 stride=(1, 50),

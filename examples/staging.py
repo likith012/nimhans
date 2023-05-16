@@ -140,7 +140,7 @@ def do_k_fold(
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model", type=str, choices=["resnet", "chambon", "deepsleep", "blanco", "eldele", "usleep"], default="resnet", help="Model to train")
+    parser.add_argument("-m", "--model", type=str, choices=["resnet", "chambon", "deepsleep", "blanco", "attnsleep", "usleep"], default="resnet", help="Model to train")
     parser.add_argument("-b", "--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--n_folds", type=int, default=5, help="Number of folds for cross validation")
     parser.add_argument("--n_jobs", type=int, default=0, help="Number of jobs to run in parallel")
@@ -159,7 +159,7 @@ if __name__ == "__main__":
         loggr = None
     elif args.loggr == "wandb":
         loggr = wandb.init(
-        name="sleep-staging",
+        name=f"staging+{args.model}+{args.modality}",
         project="nimhans",
         save_code=False,
         entity="sleep-staging",
@@ -190,12 +190,12 @@ if __name__ == "__main__":
         model_kwargs = {'n_channels': n_channels, 'sfreq': 100, 'n_classes': args.n_classes}
         model = models.SleepStagerBlanco2020(**model_kwargs)
         
-    elif args.model == "eldele":  
-        model_kwargs = {'in_channels': n_channels, 'sfreq': 100, 'n_classes': args.n_classes}
-        model = models.SleepStagerEldele2021(**model_kwargs)
+    elif args.model == "attnsleep":  
+        model_kwargs = {'n_channels': n_channels, 'n_classes': args.n_classes}
+        model = models.AttnSleep(**model_kwargs)
         
     elif args.model == "usleep":        
-        model_kwargs = {'in_chans': n_channels, 'sfreq': 100, 'n_classes': args.n_classes}
+        model_kwargs = {'n_channels': n_channels, 'sfreq': 100, 'n_classes': args.n_classes}
         model = models.USleep(**model_kwargs)
         
     

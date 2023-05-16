@@ -49,7 +49,7 @@ class SleepStagerBlanco2020(nn.Module):
     """
 
     def __init__(self, n_channels, sfreq, n_conv_chans=20, input_size_s=30,
-                 n_classes=5, n_groups=2, max_pool_size=2, dropout=0.5, apply_batch_norm=False,
+                 n_classes=5, n_groups=1, max_pool_size=2, dropout=0.5, apply_batch_norm=False,
                  return_feats=False):
         super().__init__()
 

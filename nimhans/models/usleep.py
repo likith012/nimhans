@@ -157,7 +157,7 @@ class USleep(nn.Module):
            https://github.com/perslev/U-Time/blob/master/utime/models/usleep.py
     """
     def __init__(self,
-                 in_chans=2,
+                 n_channels=2,
                  sfreq=128,
                  depth=12,
                  n_time_filters=5,
@@ -171,7 +171,7 @@ class USleep(nn.Module):
                  ):
         super().__init__()
 
-        self.in_chans = in_chans
+        self.in_chans = n_channels
         max_pool_size = 2  # Hardcoded to avoid dimensional errors
         time_conv_size = np.round(time_conv_size_s * sfreq).astype(int)
         if time_conv_size % 2 == 0:
@@ -185,7 +185,7 @@ class USleep(nn.Module):
         # Convert between units: seconds to time-points (at sfreq)
         input_size = np.ceil(input_size_s * sfreq).astype(int)
 
-        channels = [in_chans]
+        channels = [self.in_chans]
         n_filters = n_time_filters
         for _ in range(depth + 1):
             channels.append(int(n_filters * np.sqrt(complexity_factor)))

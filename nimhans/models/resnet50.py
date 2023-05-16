@@ -198,13 +198,13 @@ class projection_head(nn.Module):
         return x
 
 class resnetWithAttention(nn.Module):
-    def __init__(self, input_channels, num_class, do_context):
+    def __init__(self, n_channels, n_classes, do_context):
         super(resnetWithAttention, self).__init__()
 
         self.do_context = do_context
-        self.base_encoder = encoder(input_channels)
+        self.base_encoder = encoder(n_channels)
         self.tfmr = Transformer(256, 4, 4, 256, dropout=0.1)
-        self.projection_head = projection_head(num_class)
+        self.projection_head = projection_head(n_classes)
         
     def forward(self, x):
         if not self.do_context:
