@@ -44,11 +44,17 @@ def _get_experiment_id():
     return experiment_id
 
 
-def _get_num_channels(modality, mapping):
+def _get_num_channels(modality):
         num_channels = 0
-        for _, value in mapping.items():
-            if value in modality:
+        for m in modality:
+            if m == 'eeg':
+                num_channels += 4
+            elif m == 'emg':
                 num_channels += 1
+            elif m == 'eog':
+                num_channels += 2
+            elif m == 'ecg':
+                num_channels += 1            
         return num_channels
 
 
@@ -67,8 +73,9 @@ def do_k_fold(
 ):
     subject_ids = list(subject_files.keys())
     channels = [key for key, value in CHANNEL_MAPPING.items() if value in modality]
-    kf = KFold(n_splits=n_folds, shuffle=True)
+    print(f"Avilable Channels are: {' '.join(channels)}")
     
+    kf = KFold(n_splits=n_folds, shuffle=True)
     metrics = {"Accuracy": [], "F1": [], "Kappa": []}
     
     for fold, (train_indices, test_indices) in enumerate(kf.split(subject_ids)):
@@ -156,7 +163,7 @@ if __name__ == "__main__":
     
     subject_files = _map_subject_files(os.path.expanduser(args.dataset_path))
     experiment_id = _get_experiment_id() 
-    n_channels = _get_num_channels(args.modality, CHANNEL_MAPPING)
+    n_channels = _get_num_channels(args.modality)
     weights_path = os.path.join(os.path.expanduser(args.weights_path), experiment_id)
     experiment_name = args.model
             

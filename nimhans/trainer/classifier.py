@@ -164,8 +164,8 @@ class ClassifierTrainer(nn.Module):
                     checkpoint,
                     os.path.join(self.weights_path, self.experiment_name + "_best.pt"),
                     )
-                # if self.loggr is not None:
-                #     self.loggr.save(os.path.join(self.weights_path, self.experiment_id + "_best.pt"))
+                if self.loggr is not None:
+                    self.loggr.save(os.path.join(self.weights_path, self.experiment_name + "_best.pt"))
                 self.best_accuracy = current_accuracy
                 self.best_kappa = current_kappa
                 self.best_f1 = current_f1
