@@ -73,7 +73,7 @@ def do_k_fold(
 ):
     subject_ids = list(subject_files.keys())
     channels = [key for key, value in CHANNEL_MAPPING.items() if value in modality]
-    print(f"Avilable Channels are: {' '.join(channels)}")
+    print(f"Available Channels are: {' '.join(channels)}")
     
     kf = KFold(n_splits=n_folds, shuffle=True)
     metrics = {"Accuracy": [], "F1": [], "Kappa": []}
@@ -175,7 +175,7 @@ if __name__ == "__main__":
         os.makedirs(weights_path, exist_ok=True)
     
     if args.model == "resnet":
-        model_kwargs = {"input_channels": n_channels, "num_class": args.n_classes, "do_context": False}
+        model_kwargs = {"n_channels": n_channels, "n_classes": args.n_classes, "do_context": False}
         model = models.resnet50(**model_kwargs)
         
     elif args.model == "chambon":
